@@ -37,11 +37,45 @@ void fail(char* str, int code){
     exit(code);
 }
 
+void outputPurchase(FILE* out, Purchase_ptr purchase) {
+    fprintf(out, "%s %d $%d.%02d\n", purchase->item, purchase->amount, purchase->dollars, purchase->cents);
+}
+
+void outputCustomer(FILE* out, Customer_ptr customer) {
+    fprintf(out, "%s\n", customer->name);
+    Purchase_ptr* purchases = customer->items;
+    int i;
+    for(i = 0; i < MAX_NUM_ITEMS; i++) {
+        if(NULL == purchases[i]) break;
+        else outputPurchase(out, purchases[i]);
+    }
+    fprintf(out, "\n");
+}
+
+void outputCustomersChrono(Customer_ptr* customers) {
+    FILE* out = fopen("hw4time.txt", "w");
+    
+    int i;
+    for (i = 0; i < MAX_NUM_CUST; i++) {
+        if(NULL == customers[i]) break;
+        else outputCustomer(out, customers[i]);
+    }
+
+    fclose(out);
+}
+
 Customer_ptr newCustomer(char* name) {
     Customer_ptr customer = malloc(sizeof(Customer));
-    customer->name = name;
+    customer->name = malloc(sizeof(char) * MAX_NAME_LEN);
+    strcpy(customer->name, name);
     customer->count = 0;
     customer->items = malloc(sizeof(Purchase_ptr) * MAX_NUM_ITEMS);
+ 
+    int i;
+    for (i = 0; i < MAX_NUM_ITEMS; i++) {
+        customer->items[i] = NULL;
+    }
+    
     return customer;
 }
 
@@ -64,19 +98,51 @@ Customer_ptr getCustomerByName(Customer_ptr* customers, char* name) {
     return customers[index];
 }
 
-Purchase_ptr newPurchase(char* item, int amount, int dollars, int cents) {
+Purchase_ptr newPurchaseFull(char* item, int amount, int dollars, int cents) {
     Purchase_ptr purchase = malloc(sizeof(Purchase));
-    purchase->item = item;
+    purchase->item = malloc(sizeof(char) * MAX_NAME_LEN); 
+    strcpy(purchase->item, item);
     purchase->amount = amount;
     purchase->dollars = dollars;
     purchase->cents = cents;
     return purchase;
 }
 
+Purchase_ptr newPurchase(char* item) {
+    return newPurchaseFull(item, 0, 0, 0);
+}
+
+int getPurchaseIndex(Purchase_ptr* items, char* name) {
+    int i;
+    for(i = 0; i < MAX_NUM_ITEMS; i++) {
+        if(NULL == items[i]) {
+            items[i] = newPurchase(name);
+            return i;
+        } else if (0 == strcmp(name, items[i]->item)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+Purchase_ptr getPurchaseByItemName(Purchase_ptr* purchases, char* name) {
+    int index = getPurchaseIndex(purchases, name);
+    return purchases[index];
+}
+
+void addPurchaseToPurchase(Purchase_ptr* purchases, Purchase_ptr purchase) {
+    Purchase_ptr existingPurchase = getPurchaseByItemName(purchases, purchase->item);
+    existingPurchase->amount += purchase->amount;
+    existingPurchase->dollars = purchase->dollars;
+    existingPurchase->cents = purchase->cents;
+    free(purchase);
+}
+
 void addPurchase(Customer_ptr* customers, char* name, char* item, int amount, int dollars, int cents) {
    Customer_ptr customer = getCustomerByName(customers, name);
-   Purchase_ptr purchase = newPurchase(item, amount, dollars, cents);
-   // TODO add purchase to customer
+   addPurchaseToPurchase(customer->items, newPurchaseFull(item, amount, dollars, cents));
+   customer->count++;
 }
 
 void readInputFile(Customer_ptr* customers) {
@@ -103,6 +169,7 @@ int main(void) {
     }
 
     readInputFile(customers);
+    outputCustomersChrono(customers);
 
     free(customers);
     
