@@ -170,6 +170,7 @@ void addPurchaseToPurchase(Purchase_ptr* purchases, Purchase_ptr purchase) {
 	existingPurchase->amount += purchase->amount;
 	existingPurchase->dollars = purchase->dollars;
 	existingPurchase->cents = purchase->cents;
+    free(purchase->item);
 	free(purchase);
 }
 
@@ -247,6 +248,20 @@ void sortCustomers(Customer_ptr* customers) {
 	qsort(customers, i, sizeof(Customer_ptr), compareCustomers);
 }
 
+void destructCustomers(Customer_ptr* customers) {
+    int i, j;
+    for (i = 0; i < MAX_NUM_CUST && NULL != customers[i]; i++) {
+        free(customers[i]->name);
+        for (j = 0; j < MAX_NUM_ITEMS && NULL != customers[i]->items[j]; j++) {
+            free(customers[i]->items[j]->item);
+            free(customers[i]->items[j]);
+        }
+        free(customers[i]->items);   
+        free(customers[i]);   
+    }
+    free(customers);
+}
+
 int main(void) {
 	Customer_ptr* customers = malloc(sizeof(Customer_ptr) * MAX_NUM_CUST);
 	int i;
@@ -259,7 +274,7 @@ int main(void) {
 	sortCustomers(customers);
 	outputCustomersMoney(customers);
 
-	free(customers);
+    destructCustomers(customers);
 
 	return 0;
 }
